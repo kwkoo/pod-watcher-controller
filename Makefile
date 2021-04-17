@@ -11,9 +11,9 @@ deploy:
 	@oc project $(PROJ) || oc new-project $(PROJ)
 	@oc create sa -n $(PROJ) pod-watcher
 	@oc create clusterrole pod-watcher --verb=watch,list,update --resource=pods
-	@oc create clusterrole node-getter --verb=get,watch,list --resource=nodes
+	@oc create clusterrole node-lister --verb=get,watch,list --resource=nodes
 	@oc adm policy add-cluster-role-to-user pod-watcher -z pod-watcher -n $(PROJ) --rolebinding-name=pod-watcher-pod-watcher
-	@oc adm policy add-cluster-role-to-user node-getter -z pod-watcher -n $(PROJ) --rolebinding-name=pod-watcher-node-getter
+	@oc adm policy add-cluster-role-to-user node-lister -z pod-watcher -n $(PROJ) --rolebinding-name=pod-watcher-node-lister
 	@oc new-build -n $(PROJ) --name=pod-watcher -l app=pod-watcher --binary --docker-image=ghcr.io/kwkoo/go-toolset-7-centos7:latest
 	@/bin/echo -n "waiting for golang builder imagestreamtag..."; \
 	while [ `oc get -n $(PROJ) istag/go-toolset-7-centos7:latest --no-headers 2>/dev/null | wc -l` -lt 1 ]; do \
@@ -22,15 +22,15 @@ deploy:
 	done; \
 	/bin/echo "done"
 	@oc start-build -n $(PROJ) pod-watcher --from-dir=$(BASE)/pod-watcher --follow
-	@oc new-app pod-watcher:latest -n $(PROJ) -e ANNOTATIONKEY=providerid
+	@oc new-app -i pod-watcher -n $(PROJ) -e ANNOTATIONKEY=providerid
 	@oc set sa -n $(PROJ) deploy/pod-watcher pod-watcher
 
 clean:
 	-@oc delete all -l app=pod-watcher -n $(PROJ)
 	-@oc delete clusterrolebinding/pod-watcher-pod-watcher
-	-@oc delete clusterrolebinding/pod-watcher-node-getter
+	-@oc delete clusterrolebinding/pod-watcher-node-lister
 	-@oc delete clusterrole/pod-watcher
-	-@oc delete clusterrole/node-getter
+	-@oc delete clusterrole/node-lister
 	-@oc delete sa/pod-watcher -n $(PROJ)
 
 deploydemo:

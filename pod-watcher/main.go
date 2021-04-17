@@ -51,7 +51,11 @@ func main() {
 
 	// instantiate controller here
 	stopCh := signals.SetupSignalHandler()
-	controller := NewPodController(config.AnnotationKey, clientset, factory.Core().V1().Pods(), factory.Core().V1().Nodes())
+	controller := NewPodController(config.AnnotationKey, clientset, factory.Core().V1().Pods())
+
+	if err := controller.InitNodeCache(); err != nil {
+		log.Fatalf("could not initialize node cache: %v", err)
+	}
 
 	factory.Start(stopCh)
 

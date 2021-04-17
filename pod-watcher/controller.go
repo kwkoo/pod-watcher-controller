@@ -28,19 +28,19 @@ type Controller struct {
 	annotationKey string
 	clientset     *kubernetes.Clientset
 	podsLister    corelisters.PodLister
-	nodesLister   corelisters.NodeLister
 	podsSynced    cache.InformerSynced
 	workqueue     workqueue.RateLimitingInterface
+	nodeCache     map[string]string
 }
 
-func NewPodController(annotationKey string, clientset *kubernetes.Clientset, podInformer coreinformer.PodInformer, nodeInformer coreinformer.NodeInformer) *Controller {
+func NewPodController(annotationKey string, clientset *kubernetes.Clientset, podInformer coreinformer.PodInformer) *Controller {
 	c := Controller{
 		annotationKey: annotationKey,
 		clientset:     clientset,
 		podsLister:    podInformer.Lister(),
-		nodesLister:   nodeInformer.Lister(),
 		podsSynced:    podInformer.Informer().GetController().HasSynced,
 		workqueue:     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "ScheduledPods"),
+		nodeCache:     make(map[string]string),
 	}
 
 	log.Print("setting up event handlers")
@@ -52,6 +52,20 @@ func NewPodController(annotationKey string, clientset *kubernetes.Clientset, pod
 	})
 
 	return &c
+}
+
+// InitNodeCache lists all nodes and populates the nodeCache with the data.
+func (c *Controller) InitNodeCache() error {
+	nodes, err := c.clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("could not list nodes: %w", err)
+	}
+	for _, node := range nodes.Items {
+		c.nodeCache[node.GetObjectMeta().GetName()] = node.Spec.ProviderID
+	}
+
+	log.Printf("node cache initialized with %d entries", len(c.nodeCache))
+	return nil
 }
 
 func (c *Controller) Run(threadiness int, stopCh <-chan struct{}) error {
@@ -121,15 +135,6 @@ func (c *Controller) processNextWorkItem() bool {
 			return fmt.Errorf("could not get pod %s in namespace %s from pod informer: %w", podinfo.name, podinfo.namespace, err)
 		}
 
-		/*
-			p, ok := obj.(*v1.Pod)
-			if !ok {
-				log.Printf("expected to pull a pointer to Pod off scheduled queue but got %T instead", obj)
-				c.workqueue.Forget(obj)
-				return nil
-			}
-		*/
-
 		annotationValue, ok := p.ObjectMeta.Annotations[c.annotationKey]
 		if !ok {
 			log.Print("this pod does not have the expected annotation")
@@ -148,13 +153,7 @@ func (c *Controller) processNextWorkItem() bool {
 
 		log.Printf("name=%s namespace=%s nodeName=%s annotation-value=%s", p.ObjectMeta.Name, namespace, nodeName, annotationValue)
 
-		node, err := c.nodesLister.Get(nodeName)
-		if err != nil {
-			c.workqueue.AddRateLimited(obj)
-			return fmt.Errorf("could not get node %s, requeuing", nodeName)
-		}
-
-		providerid := node.Spec.ProviderID
+		providerid := c.lookupNodeInfo(nodeName)
 
 		log.Printf("providerID for node %s=%s", nodeName, providerid)
 
@@ -187,14 +186,11 @@ func (c *Controller) processNextWorkItem() bool {
 	return true
 }
 
-func newConfigMap(cmname, namespace, providerid string) *v1.ConfigMap {
-	m := make(map[string]string)
-	m["data"] = providerid
-	return &v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cmname,
-			Namespace: namespace,
-		},
-		Data: m,
+func (c Controller) lookupNodeInfo(name string) string {
+	info, ok := c.nodeCache[name]
+	if !ok {
+		log.Printf("node cache miss - could not get info for node %s", name)
+		return ""
 	}
+	return info
 }

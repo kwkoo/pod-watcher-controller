@@ -10,12 +10,38 @@ If the pod contains a certain annotation, the controller will
 
 The pod can utilize this information by mounting the annotation as a volume using the downward API. Refer to `demo.yaml` for more info on how this is done.
 
-
 Sample `providerID`:
 
 ```
 aws:///ap-southeast-1a/i-06fbbd699deb4ebc4
 ```
+
+Note: The node `providerID`s are cached when the controller starts up. If nodes are added after the controller has started, the controller will not know about the `providerID`s of those nodes.
+
+## Installation
+
+1. Login to OpenShift using `oc login`
+
+1. Build and install the `pod-watcher`:
+
+	```
+	make deploy
+	```
+
+1. Deploy the demo app:
+
+	```
+	make deploydemo
+	```
+
+1. After the demo has been deployed, access the demo app with:
+
+	```
+	curl http://$(oc get -n demo route/demo -o jsonpath='{.spec.host}')
+	```
+
+The demo app should print out the `providerID` of the node that it is deployed on.
+
 
 ## Resources
 
