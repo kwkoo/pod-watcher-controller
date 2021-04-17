@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  labels:
+    app: demo
+    app.kubernetes.io/component: demo
+    app.kubernetes.io/instance: demo
+    app.kubernetes.io/name: demo
+  name: demo
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      deployment: demo
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+        providerid: ''
+      creationTimestamp: null
+      labels:
+        deployment: demo
+    spec:
+      containers:
+      - image: image-registry.openshift-image-registry.svc:5000/demo/demo:latest
+        imagePullPolicy: IfNotPresent
+        name: demo
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        volumeMounts:
+          - name: podinfo
+            mountPath: /etc/podinfo
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      volumes:
+        - name: podinfo
+          downwardAPI:
+            items:
+              - path: "data"
+                fieldRef:
+                  fieldPath: metadata.annotations['providerid']
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    openshift.io/generated-by: OpenShiftNewApp
+  labels:
+    app: demo
+    app.kubernetes.io/component: demo
+    app.kubernetes.io/instance: demo
+    app.kubernetes.io/name: demo
+  name: demo
+spec:
+  ports:
+  - name: 8080-tcp
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    deployment: demo
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    openshift.io/host.generated: "true"
+  labels:
+    app: demo
+    app.kubernetes.io/component: demo
+    app.kubernetes.io/instance: demo
+    app.kubernetes.io/name: demo
+  name: demo
+spec:
+  port:
+    targetPort: 8080-tcp
+  to:
+    kind: Service
+    name: demo
+    weight: 100
+  wildcardPolicy: None
+status: {}
