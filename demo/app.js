@@ -21,7 +21,7 @@ const server = http.createServer((req, res) => {
     if (err) {
       res.end(`error: ${err}`);
     } else {
-      res.end(`providerid: ${data}`)
+      res.end(`node info: ${data}`)
     }
   });
 });

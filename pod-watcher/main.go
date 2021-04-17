@@ -17,6 +17,7 @@ func main() {
 		MasterURL     string `usage:"Kubernetes master URL"`
 		Kubeconfig    string `usage:"Path to kubeconfig file"`
 		AnnotationKey string `usage:"The annotation key that specifies the name of the ConfigMap" mandatory:"true"`
+		NumWorkers    int    `usage:"Number of workqueue workers" default:"1"`
 	}{}
 
 	if err := configparser.Parse(&config); err != nil {
@@ -59,7 +60,7 @@ func main() {
 
 	factory.Start(stopCh)
 
-	if err := controller.Run(1, stopCh); err != nil {
+	if err := controller.Run(config.NumWorkers, stopCh); err != nil {
 		log.Fatalf("error running controller: %v", err)
 	}
 }

@@ -2,10 +2,11 @@ PROJ=demo
 
 BASE:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: run deploy clean deploydemo cleandemo
+.PHONY: run deploy clean deploydemo cleandemo curl logs
 
 run:
-	@cd $(BASE)/pod-watcher && ANNOTATIONKEY=providerid KUBECONFIG=~/.kube/config go run .
+	@echo "Running pod-watcher locally..."
+	@cd $(BASE)/pod-watcher && NUMWORKERS=2 ANNOTATIONKEY=providerid KUBECONFIG=~/.kube/config go run .
 
 deploy:
 	@oc project $(PROJ) || oc new-project $(PROJ)
@@ -37,6 +38,13 @@ deploydemo:
 	@oc new-build --name demo -l app=demo --binary -i nodejs -n $(PROJ)
 	@oc start-build demo --from-dir=$(BASE)/demo --follow -n $(PROJ)
 	@oc apply -n $(PROJ) -f $(BASE)/demo.yaml
+	@echo "demo is now available at http://`oc get -n $(PROJ) route/demo -o jsonpath='{.spec.host}'`"
 
 cleandemo:
 	-@oc delete all -l app=demo -n $(PROJ)
+
+curl:
+	@curl "http://`oc get -n $(PROJ) route/demo -o jsonpath='{.spec.host}'`"
+
+logs:
+	@oc logs -n $(PROJ) -f deploy/pod-watcher
