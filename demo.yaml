@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
       - image: image-registry.openshift-image-registry.svc:5000/demo/demo:latest
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         name: demo
         ports:
         - containerPort: 8080

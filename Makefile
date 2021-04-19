@@ -2,11 +2,14 @@ PROJ=demo
 
 BASE:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: run deploy clean deploydemo cleandemo curl logs
+.PHONY: run test deploy clean deploydemo cleandemo curl logs
 
 run:
 	@echo "Running pod-watcher locally..."
 	@cd $(BASE)/pod-watcher && NUMWORKERS=2 ANNOTATIONKEY=providerid KUBECONFIG=~/.kube/config go run .
+
+test:
+	@cd $(BASE)/pod-watcher && NUMWORKERS=2 ANNOTATIONKEY=providerid KUBECONFIG=~/.kube/config go test -v .
 
 deploy:
 	@oc project $(PROJ) || oc new-project $(PROJ)
@@ -42,6 +45,10 @@ deploydemo:
 
 cleandemo:
 	-@oc delete all -l app=demo -n $(PROJ)
+	-@IMAGE="`oc get images | grep $(PROJ)/demo | awk '{ print $$1 }'`"; \
+	if [ -n "$$IMAGE" ]; then \
+	  oc delete image $$IMAGE; \
+	fi
 
 curl:
 	@curl "http://`oc get -n $(PROJ) route/demo -o jsonpath='{.spec.host}'`"

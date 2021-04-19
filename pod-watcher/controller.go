@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -58,31 +56,13 @@ func NewPodController(annotationKey string, clientset *kubernetes.Clientset, pod
 
 // InitNodeCache lists all nodes and populates the nodeCache with the data.
 func (c *Controller) InitNodeCache() error {
-	type nodeInfo struct {
-		Name       string `json:"name"`
-		ProviderID string `json:"providerid"`
-		Hostname   string `json:"hostname"`
-		InternalIP string `json:"internalip"`
-	}
 	nodes, err := c.clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("could not list nodes: %w", err)
 	}
 	for _, node := range nodes.Items {
-		n := nodeInfo{
-			Name:       node.GetObjectMeta().GetName(),
-			ProviderID: node.Spec.ProviderID,
-		}
-		for _, a := range node.Status.Addresses {
-			if a.Type == v1.NodeHostName {
-				n.Hostname = a.Address
-			} else if a.Type == v1.NodeInternalIP {
-				n.InternalIP = a.Address
-			}
-		}
-		var b bytes.Buffer
-		json.NewEncoder(&b).Encode(&n)
-		c.nodeCache[n.Name] = b.String()
+		n := newNodeInfo(node)
+		c.nodeCache[n.Name] = n.String()
 	}
 
 	log.Printf("node cache initialized with %d entries", len(c.nodeCache))
@@ -174,18 +154,18 @@ func (c *Controller) processNextWorkItem() bool {
 
 		log.Printf("name=%s namespace=%s nodeName=%s annotation-value=%s", p.ObjectMeta.Name, namespace, nodeName, annotationValue)
 
-		providerid := c.lookupNodeInfo(nodeName)
+		info := c.lookupNodeInfo(nodeName)
 
-		log.Printf("providerID for node %s=%s", nodeName, providerid)
+		log.Printf("nodeInfo for node %s=%s", nodeName, info)
 
-		if annotationValue == providerid {
+		if annotationValue == info {
 			log.Print("pod's annotation is already set to the right value")
 			c.workqueue.Forget(obj)
 			return nil
 		}
 
 		annotations := p.ObjectMeta.GetAnnotations()
-		annotations[c.annotationKey] = providerid
+		annotations[c.annotationKey] = info
 		p.ObjectMeta.SetAnnotations(annotations)
 
 		if _, err := c.clientset.CoreV1().Pods(namespace).Update(context.TODO(), p, metav1.UpdateOptions{}); err != nil {

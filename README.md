@@ -1,22 +1,22 @@
 # Pod Watcher
 
-A controller that watches for pods being scheduled (i.e. the `PodScheduled` condition type).
+A controller based on the [Kubernetes sample controller](https://github.com/kubernetes/sample-controller) that watches for pods being scheduled (i.e. the `PodScheduled` condition type).
 
 If the pod contains a certain annotation, the controller will
 
 * Lookup the node that the pod is scheduled on (`.spec.nodeName`)
-* Lookup the node's `.spec.providerID`
-* Annotate the pod with the node's `providerID`
+* Lookup the node's information (hostname, provider ID, cloud provider name, availability zone)
+* Annotate the pod with the node's information
 
 The pod can utilize this information by mounting the annotation as a volume using the downward API. Refer to `demo.yaml` for more info on how this is done.
 
 Sample `providerID`:
 
 ```
-aws:///ap-southeast-1a/i-06fbbd699deb4ebc4
+aws:///ap-southeast-1a/i-06fbbd699deb4abcd
 ```
 
-Note: The node `providerID`s are cached when the controller starts up. If nodes are added after the controller has started, the controller will not know about the `providerID`s of those nodes.
+Note: The node information is cached when the controller starts up. If nodes are added after the controller has started, the controller will not know about those nodes.
 
 ## Installation
 
