@@ -16,6 +16,8 @@ Sample `providerID`:
 aws:///ap-southeast-1a/i-06fbbd699deb4abcd
 ```
 
+The container image for the pod-watcher is available at `ghcr.io/kwkoo/pod-watcher:0.1`.
+
 Note: The node information is cached when the controller starts up. If nodes are added after the controller has started, the controller will not know about those nodes.
 
 ## Installation
@@ -40,7 +42,7 @@ Note: The node information is cached when the controller starts up. If nodes are
 	curl http://$(oc get -n demo route/demo -o jsonpath='{.spec.host}')
 	```
 
-The demo app should print out the `providerID` of the node that it is deployed on.
+The demo app should print out information about the node that the pod is deployed on.
 
 
 ## Resources
