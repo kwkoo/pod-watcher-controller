@@ -4,7 +4,7 @@ const fs = require('fs');
 const hostname = '0.0.0.0';
 const port = 8080;
 
-var filename = '/etc/podinfo/data';
+var filename = '/etc/nodeinfo/data';
 
 const server = http.createServer((req, res) => {
   res.setHeader('Content-Type', 'text/plain');

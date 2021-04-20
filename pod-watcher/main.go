@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"time"
+	_ "time/tzdata"
 
 	"github.com/kwkoo/configparser"
 	"k8s.io/client-go/informers"

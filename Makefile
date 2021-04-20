@@ -1,15 +1,17 @@
 PROJ=demo
+IMAGENAME=ghcr.io/kwkoo/pod-watcher
+VERSION=0.1
 
 BASE:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
-.PHONY: run test deploy clean deploydemo cleandemo curl logs
+.PHONY: run test deploy clean deploydemo cleandemo curl logs image
 
 run:
 	@echo "Running pod-watcher locally..."
 	@cd $(BASE)/pod-watcher && NUMWORKERS=2 ANNOTATIONKEY=providerid KUBECONFIG=~/.kube/config go run .
 
 test:
-	@cd $(BASE)/pod-watcher && NUMWORKERS=2 ANNOTATIONKEY=providerid KUBECONFIG=~/.kube/config go test -v .
+	@cd $(BASE)/pod-watcher && go test -v .
 
 deploy:
 	@oc project $(PROJ) || oc new-project $(PROJ)
@@ -26,7 +28,7 @@ deploy:
 	done; \
 	/bin/echo "done"
 	@oc start-build -n $(PROJ) pod-watcher --from-dir=$(BASE)/pod-watcher --follow
-	@oc new-app -i pod-watcher -n $(PROJ) -e ANNOTATIONKEY=providerid
+	@oc new-app -i pod-watcher -n $(PROJ) -e ANNOTATIONKEY=nodeinfo
 	@oc set sa -n $(PROJ) deploy/pod-watcher pod-watcher
 
 clean:
@@ -55,3 +57,7 @@ curl:
 
 logs:
 	@oc logs -n $(PROJ) -f deploy/pod-watcher
+
+image:
+	@docker build --rm -t $(IMAGENAME):$(VERSION) $(BASE)
+	@docker push $(IMAGENAME):$(VERSION)

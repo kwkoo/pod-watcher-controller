@@ -25,7 +25,7 @@ spec:
     metadata:
       annotations:
         openshift.io/generated-by: OpenShiftNewApp
-        providerid: ''
+        nodeinfo: '{}'
       creationTimestamp: null
       labels:
         deployment: demo
@@ -38,18 +38,18 @@ spec:
         - containerPort: 8080
           protocol: TCP
         volumeMounts:
-          - name: podinfo
-            mountPath: /etc/podinfo
+          - name: nodeinfo
+            mountPath: /etc/nodeinfo
         resources: {}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
       volumes:
-        - name: podinfo
+        - name: nodeinfo
           downwardAPI:
             items:
               - path: "data"
                 fieldRef:
-                  fieldPath: metadata.annotations['providerid']
+                  fieldPath: metadata.annotations['nodeinfo']
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
